@@ -38,10 +38,15 @@ td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:middle}
 footer{margin-top:22px;color:var(--quiet);font-size:clamp(12px,1vw,16px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 a{color:var(--accent)}
 .tv .wrap{max-width:none;padding:28px 36px}
+.brand{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:clamp(16px,4vw,64px);background:#fff;border-radius:18px;padding:clamp(10px,1.4vw,22px) 20px;margin-bottom:18px;border:1px solid var(--line)}
+.brand img{display:block;height:clamp(44px,7vw,120px);width:auto;max-width:100%}
+.brand img.wide{height:clamp(30px,4.6vw,78px)}
+.demo{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;font-size:.5em;vertical-align:middle;border:1px solid var(--warn);color:var(--warn);font-family:Inter,sans-serif;letter-spacing:0}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="brand" id="brand" hidden></div>
   <header>
     <div><h1 id="title">Live leaderboard</h1><div class="sub" id="sub"></div></div>
     <div class="live" id="live" aria-live="polite"></div>
@@ -55,6 +60,30 @@ const SUPABASE_URL = "https://lkcvgpbqnutvpdfmitfn.supabase.co";
 const PUBLIC_KEY = "sb_publishable_GoO0wO3k4yjTuKeR1Mvxcg_wL5hIDeJ"; // the publishable key: read-only, safe in a browser
 const q = new URLSearchParams(location.search), slug = (q.get("t") || "").toLowerCase().trim(), tv = q.get("tv") === "1";
 if (tv) document.body.classList.add("tv");
+// Host branding: &brand=shoppe, or automatic when the tournament address mentions the shop or the Trifecta.
+const BRANDS = {
+  shoppe: [{ src: "brand/archery-shoppe.png", alt: "Archery Shoppe" }, { src: "brand/trifecta-challenge.png", alt: "Trifecta Challenge", wide: true }],
+};
+const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug) ? "shoppe" : "")).toLowerCase();
+if (BRANDS[brandKey]) {
+  const b = document.getElementById("brand");
+  b.innerHTML = BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}"${l.wide ? ' class="wide"' : ""}>`).join("");
+  b.hidden = false;
+}
+// ?t=demo shows sample scores so the screen can be checked before a shoot.
+function demoData() {
+  const names = { "Freestyle": ["Alex R.", "Jamie L.", "Chris M.", "Taylor B.", "Morgan D.", "Casey H."], "Bowhunter": ["Mark R.", "Lisa K.", "Dan W.", "Amy S."], "Barebow / Traditional": ["Joe T.", "Rita F.", "Sam B."], "Youth": ["Maya T.", "Jordan P.", "Ava L."] };
+  const ends = 10, step = Math.floor(Date.now() / 10000) % ends + 1; let seed = 3;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const archers = []; let bale = 1;
+  for (const [div, list] of Object.entries(names)) list.forEach((name, i) => {
+    let total = 0, x = 0; const skill = 0.97 - i * 0.025 - (div === "Youth" ? 0.06 : 0);
+    for (let e = 0; e < step; e++) for (let a = 0; a < 3; a++) { const r = rnd(); const s = r < skill * 0.55 ? 11 : r < skill ? 10 : 9; total += s; if (s === 11) x++; }
+    archers.push({ name, division: div, class: "", bale: Math.ceil(bale / 4), pos: "ABCD"[(bale - 1) % 4], total, x, ends_shot: step }); bale++;
+  });
+  return { ok: true, updated_at: new Date().toISOString(), archers,
+    tournament: { name: "Thursday League · Test", event_date: new Date().toISOString().slice(0, 10), ends, per_end: 3, status: "live", divisions: Object.keys(names) } };
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const group = (a) => [a.division, a.class].filter(Boolean).join(" · ") || "Open";
 function rank(list) {
@@ -89,6 +118,7 @@ function draw(d) {
   $("updated").textContent = d.updated_at ? `Last score ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
 }
 async function load() {
+  if (slug === "demo") { draw(demoData()); document.getElementById("title").insertAdjacentHTML("beforeend", '<span class="demo">Sample scores</span>'); return; }
   if (!slug) { document.getElementById("board").innerHTML = `<div class="msg">Open this page from the tournament's link (it ends in ?t=…).</div>`; return; }
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t_board`, {
