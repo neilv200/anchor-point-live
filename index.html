@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live leaderboard · Anchor Point Archery</title>
+<meta name="description" content="Live tournament scores from Anchor Point Archery.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F6F4EF;--card:#FFFFFF;--ink:#16181D;--quiet:#5A5D64;--line:#E4DED2;--gold:#D4A017;--silver:#8E979F;--bronze:#B4703A;--accent:#1F5FAE;--warn:#B45309}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F1114;--card:#1A1D22;--ink:#F2F2EF;--quiet:#A6AAB2;--line:#2C3037;--accent:#6EA8FF;--warn:#F2B35C}}
+:root[data-theme="dark"]{--bg:#0F1114;--card:#1A1D22;--ink:#F2F2EF;--quiet:#A6AAB2;--line:#2C3037;--accent:#6EA8FF;--warn:#F2B35C}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+.wrap{max-width:1600px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+h1{margin:0;font-family:Oswald,sans-serif;font-weight:700;font-size:clamp(28px,4vw,64px);line-height:1;letter-spacing:.5px;text-transform:uppercase}
+.sub{color:var(--quiet);font-size:clamp(14px,1.4vw,22px);margin-top:6px}
+.live{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:clamp(13px,1.2vw,20px);color:var(--quiet)}
+.dot{width:12px;height:12px;border-radius:50%;background:#2E9E5B;animation:p 1.6s ease-in-out infinite}
+.final .dot{background:var(--gold);animation:none}
+@keyframes p{50%{opacity:.35}}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.div{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.div h2{margin:0 0 8px;font-family:Oswald,sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;font-size:clamp(18px,1.8vw,30px)}
+table{width:100%;border-collapse:collapse;font-size:clamp(15px,1.5vw,26px)}
+th{text-align:left;font-size:.6em;letter-spacing:1px;text-transform:uppercase;color:var(--quiet);font-weight:700;padding:4px 6px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:middle}
+.r{text-align:right;font-variant-numeric:tabular-nums}
+.place{display:inline-flex;align-items:center;justify-content:center;width:1.9em;height:1.9em;border-radius:50%;font-weight:800;font-size:.9em}
+.p1{background:var(--gold);color:#1b1b1b}.p2{background:var(--silver);color:#fff}.p3{background:var(--bronze);color:#fff}
+.name{font-weight:700}
+.meta{color:var(--quiet);font-size:.62em;font-weight:500}
+.score{font-family:Oswald,sans-serif;font-weight:700;font-size:1.25em}
+.tie{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:.55em;font-weight:700;color:var(--warn);border:1px solid var(--warn)}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;font-size:18px;color:var(--quiet)}
+footer{margin-top:22px;color:var(--quiet);font-size:clamp(12px,1vw,16px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+a{color:var(--accent)}
+.tv .wrap{max-width:none;padding:28px 36px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1 id="title">Live leaderboard</h1><div class="sub" id="sub"></div></div>
+    <div class="live" id="live" aria-live="polite"></div>
+  </header>
+  <main id="board"><div class="msg">Loading scores…</div></main>
+  <footer><span>Scored live with Anchor Point Archery</span><span id="updated"></span></footer>
+</div>
+<script>
+// The public leaderboard for a tournament run in the Anchor Point app. Address: ?t=<tournament address>; add &tv=1 for a TV.
+const SUPABASE_URL = "https://lkcvgpbqnutvpdfmitfn.supabase.co";
+const PUBLIC_KEY = "sb_publishable_GoO0wO3k4yjTuKeR1Mvxcg_wL5hIDeJ"; // the publishable key: read-only, safe in a browser
+const q = new URLSearchParams(location.search), slug = (q.get("t") || "").toLowerCase().trim(), tv = q.get("tv") === "1";
+if (tv) document.body.classList.add("tv");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const group = (a) => [a.division, a.class].filter(Boolean).join(" · ") || "Open";
+function rank(list) {
+  const s = list.slice().sort((a, b) => b.total - a.total || b.x - a.x || String(a.name).localeCompare(String(b.name)));
+  let place = 0;
+  return s.map((a, i) => {
+    const p = s[i - 1];
+    if (!p || p.total !== a.total || p.x !== a.x) place = i + 1;
+    return { ...a, place, tie: a.total > 0 && s.some((b, j) => j !== i && b.total === a.total && b.x === a.x) };
+  });
+}
+function draw(d) {
+  const t = d.tournament, $ = (id) => document.getElementById(id);
+  document.title = `${t.name} · Live leaderboard`;
+  $("title").textContent = t.name;
+  $("sub").textContent = [t.event_date ? new Date(t.event_date + "T12:00:00").toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : "", `${t.ends} ends × ${t.per_end} arrows`].filter(Boolean).join(" · ");
+  const final = t.status === "final";
+  $("live").className = "live" + (final ? " final" : "");
+  $("live").innerHTML = `<span class="dot" aria-hidden="true"></span>${final ? "Final results" : "Live"}`;
+  const groups = {};
+  d.archers.forEach((a) => (groups[group(a)] = groups[group(a)] || []).push(a));
+  const order = (t.divisions || []).map((x) => x.toLowerCase());
+  const names = Object.keys(groups).sort((a, b) => {
+    const ia = order.indexOf(a.toLowerCase()), ib = order.indexOf(b.toLowerCase());
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+  });
+  $("board").innerHTML = names.length ? `<div class="grid">${names.map((g) => {
+    const rows = rank(groups[g]).slice(0, tv ? 12 : 500);
+    return `<section class="div"><h2>${esc(g)}</h2><table><thead><tr><th>#</th><th>Archer</th><th class="r">Score</th><th class="r">X</th><th class="r">Ends</th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale ? `<div class="meta">Bale ${esc(r.bale)}${esc(r.pos || "")}</div>` : ""}</td><td class="r score">${r.total}</td><td class="r">${r.x}</td><td class="r">${r.ends_shot}/${t.ends}</td></tr>`).join("")}</tbody></table></section>`;
+  }).join("")}</div>` : `<div class="msg">No archers yet.</div>`;
+  $("updated").textContent = d.updated_at ? `Last score ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
+}
+async function load() {
+  if (!slug) { document.getElementById("board").innerHTML = `<div class="msg">Open this page from the tournament's link (it ends in ?t=…).</div>`; return; }
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t_board`, {
+      method: "POST",
+      headers: { apikey: PUBLIC_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slug: slug }),
+    });
+    const d = await r.json();
+    if (d && d.ok) draw(d);
+    else document.getElementById("board").innerHTML = `<div class="msg">This leaderboard isn't up yet. It appears when the director opens scoring.</div>`;
+  } catch (e) {
+    document.getElementById("live").textContent = "Reconnecting…";
+  }
+}
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>
