@@ -58,13 +58,16 @@ a{color:var(--accent)}
 // The public leaderboard for a tournament run in the Anchor Point app. Address: ?t=<tournament address>; add &tv=1 for a TV.
 const SUPABASE_URL = "https://lkcvgpbqnutvpdfmitfn.supabase.co";
 const PUBLIC_KEY = "sb_publishable_GoO0wO3k4yjTuKeR1Mvxcg_wL5hIDeJ"; // the publishable key: read-only, safe in a browser
-const q = new URLSearchParams(location.search), slug = (q.get("t") || "").toLowerCase().trim(), tv = q.get("tv") === "1";
+const q = new URLSearchParams(location.search), tv = q.get("tv") === "1";
+let slug = (q.get("t") || "").toLowerCase().trim();
+// ?host=shoppe: always show that host's current tournament (the short TV address /shoppe uses this).
+const host = (q.get("host") || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
 if (tv) document.body.classList.add("tv");
 // Host branding: &brand=shoppe, or automatic when the tournament address mentions the shop or the Trifecta.
 const BRANDS = {
   shoppe: [{ src: "brand/archery-shoppe.png", alt: "Archery Shoppe" }, { src: "brand/trifecta-challenge.png", alt: "Trifecta Challenge", wide: true }],
 };
-const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug) ? "shoppe" : "")).toLowerCase();
+const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug + " " + host) ? "shoppe" : "")).toLowerCase();
 if (BRANDS[brandKey]) {
   const b = document.getElementById("brand");
   b.innerHTML = BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}"${l.wide ? ' class="wide"' : ""}>`).join("");
@@ -119,6 +122,20 @@ function draw(d) {
 }
 async function load() {
   if (slug === "demo") { draw(demoData()); document.getElementById("title").insertAdjacentHTML("beforeend", '<span class="demo">Sample scores</span>'); return; }
+  if (host) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t_latest`, { method: "POST", headers: { apikey: PUBLIC_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_prefix: host }) });
+      const found = await r.json();
+      slug = typeof found === "string" ? found : "";
+    } catch (e) { document.getElementById("live").textContent = "Reconnecting…"; return; }
+    if (!slug) {
+      document.getElementById("title").textContent = "Live leaderboard";
+      document.getElementById("sub").textContent = "";
+      document.getElementById("live").textContent = "";
+      document.getElementById("board").innerHTML = `<div class="msg">No tournament is scoring right now. Leave this screen on: it switches over by itself when the director opens scoring.</div>`;
+      return;
+    }
+  }
   if (!slug) { document.getElementById("board").innerHTML = `<div class="msg">Open this page from the tournament's link (it ends in ?t=…).</div>`; return; }
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t_board`, {
