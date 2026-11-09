@@ -5,8 +5,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live leaderboard · Anchored in Archery</title>
-<meta name="description" content="Live tournament scores from Anchored in Archery.">
+<title>Live leaderboard · Anchored In Archery</title>
+<meta name="description" content="Live tournament scores from Anchored In Archery.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -54,10 +54,10 @@ a{color:var(--accent)}
     <div class="live" id="live" aria-live="polite"></div>
   </header>
   <main id="board"><div class="msg">Loading scores…</div></main>
-  <footer><span>Scored live with Anchored in Archery</span><span id="updated"></span></footer>
+  <footer><span>Scored live with Anchored In Archery</span><span id="updated"></span></footer>
 </div>
 <script>
-// The public leaderboard for a tournament run in the Anchored in Archery app. Address: ?t=<tournament address>; add &tv=1 for a TV.
+// The public leaderboard for a tournament run in the Anchored In Archery app. Address: ?t=<tournament address>; add &tv=1 for a TV.
 const SUPABASE_URL = "https://lkcvgpbqnutvpdfmitfn.supabase.co";
 const PUBLIC_KEY = "sb_publishable_GoO0wO3k4yjTuKeR1Mvxcg_wL5hIDeJ"; // the publishable key: read-only, safe in a browser
 const q = new URLSearchParams(location.search), tv = q.get("tv") === "1";
