@@ -23,7 +23,7 @@ footer{color:var(--quiet);font-size:14px;margin-top:20px}
 <nav><a href="../support/">Support</a><a href="../terms/">Terms of Use</a><a href="../privacy/">Privacy Policy</a></nav>
 <div class="card">
 <h1>Privacy Policy</h1>
-<p class="sub">Anchored in Archery · Last updated November 8, 2026</p>
+<p class="sub">Anchored in Archery · Last updated November 9, 2026</p>
 
 <p>Anchored in Archery is made by Neil Evan Valdez ("we", "us"). This policy explains what the app collects, why, and the choices you have. We don't sell your data, and we don't use it to track you across other apps or websites.</p>
 
@@ -53,10 +53,18 @@ footer{color:var(--quiet);font-size:14px;margin-top:20px}
 <li><strong>Microphone</strong> is used only by the sound chronograph and shot-noise tools. Audio is processed on your device and never uploaded.</li>
 </ul>
 
+<h2>Heart rate (Apple Health and Health Connect)</h2>
+<ul>
+<li>If you turn on <strong>Heart rate from your watch</strong> (Account), the app reads only your <strong>heart rate</strong> from Apple Health (iPhone) or Health Connect (Android), for the time you were scoring a round. It never reads other health data and never writes to your health data.</li>
+<li>The heart rate for each end (average and peak) is saved with that round and synced to your account like the rest of the round. It is not used for advertising, not sold, and not shared with anyone except as described here.</li>
+<li>It is sent to the AI coach only if you also turn on <strong>Let the AI coach see my heart rate</strong>. A coach you link to can see it with your rounds while you share them.</li>
+<li>You can turn heart rate off at any time in Account, and remove access in the Health app (iPhone) or Health Connect (Android). Deleting a round or your account deletes its heart rate too.</li>
+</ul>
+
 <h2>Services that process data for us</h2>
 <ul>
 <li><strong>Supabase</strong> stores accounts and synced data.</li>
-<li><strong>Anthropic</strong> generates AI coach answers. Your question and the archery details needed to answer it (such as recent scores and your setup) are sent to produce the reply.</li>
+<li><strong>Anthropic</strong> generates AI coach answers. Your question and the archery details needed to answer it (such as recent scores and your setup, and heart rate only if you allowed it) are sent to produce the reply.</li>
 <li><strong>RevenueCat, Apple and Google</strong> handle subscriptions.</li>
 <li><strong>Open-Meteo</strong> provides weather when you ask for it.</li>
 </ul>
