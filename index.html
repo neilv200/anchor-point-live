@@ -110,6 +110,16 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
 .glass .ebox.todo{opacity:.45}
 .glass .tie{color:#C81E12;border-color:#C81E12;font-weight:800}
 .glass h1{font-weight:700}.glass .live{color:#111;font-weight:800}.glass .dot{background:#18A558;width:16px;height:16px}
+/* TV glass: slim title bar; each division's name and its column headings stay pinned while the archers scroll under them */
+.glass header{top:0;margin:0 0 12px;padding:8px 24px;border-radius:0 0 22px 22px;align-items:center}
+.glass header>div:first-child{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+.glass h1{font-size:clamp(20px,1.9vw,36px)}
+.glass .sub{margin-top:0;font-size:clamp(13px,1.05vw,20px);font-weight:600}
+.glass .div{overflow:visible}
+.glass .div h2{position:sticky;top:var(--pin1,70px);z-index:2;border-radius:30px 30px 0 0;padding-top:22px}
+.glass thead th{position:sticky;top:var(--pin2,130px);z-index:2;background:#F7F3E8;border-bottom:0;box-shadow:inset 0 -4px 0 #111;padding-top:10px}
+.glass table.tri thead th.sg,.glass table.tri thead th.xx{border-left:0;box-shadow:inset 0 -4px 0 #111,inset 3px 0 0 rgba(17,17,17,.6)}
+.glass table.tri thead th.tt{border-left:0;background:#111;box-shadow:inset 0 -4px 0 #111}
 .fading .wrap{opacity:0}
 .demo{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;font-size:.5em;vertical-align:middle;border:1px solid var(--warn);color:var(--warn);font-family:Inter,sans-serif;letter-spacing:0}
 </style>
@@ -229,6 +239,12 @@ function draw(d) {
     return `<section class="div"><h2>${esc(g)}</h2><table><thead><tr><th>#</th><th>Archer</th><th class="r">Score</th><th class="r">X</th><th class="r">Ends</th></tr></thead><tbody>${rows.map((r) =>
       `<tr><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale ? `<div class="meta">Bale ${esc(r.bale)}${esc(r.pos || "")}</div>` : ""}</td><td class="r score">${r.total}</td><td class="r">${r.x}</td><td class="r">${r.ends_shot}/${t.ends}</td></tr>${showEnds && Array.isArray(r.ends) && r.ends.length ? `<tr class="er"><td></td><td colspan="4">${endStrip(r.ends, t.ends, "")}</td></tr>` : ""}`).join("")}</tbody></table></section>`;
   }).join("")}</div>` : `<div class="msg">No archers yet.</div>`;
+  if (document.body.classList.contains("glass")) {
+    const hb = document.querySelector("header").getBoundingClientRect(), h2 = document.querySelector(".div h2");
+    const pin1 = Math.round(hb.height - 14);
+    document.documentElement.style.setProperty("--pin1", pin1 + "px");
+    if (h2) document.documentElement.style.setProperty("--pin2", Math.round(pin1 + h2.getBoundingClientRect().height - 1) + "px");
+  }
   $("updated").textContent = d.updated_at ? `Last score ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
 }
 async function load() {
@@ -267,7 +283,7 @@ setInterval(load, 10000);
 // On a TV the board scrolls by itself when it is taller than the screen: down slowly, a pause, then back to the top. &scroll=0 turns it off.
 if (tv && q.get("scroll") !== "0") {
   let wait = 5, last = performance.now(), pos = 0;
-  const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 28)); // pixels a second; &speed=20 to try another pace
+  const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 29.5)); // pixels a second; &speed=20 to try another pace
   const stepScroll = (now) => {
     const dt = Math.min(100, now - last) / 1000; last = now;
     const max = document.documentElement.scrollHeight - innerHeight;
