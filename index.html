@@ -20,6 +20,9 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 h1{margin:0;font-family:Oswald,sans-serif;font-weight:700;font-size:clamp(28px,4vw,64px);line-height:1;letter-spacing:.5px;text-transform:uppercase}
 .sub{color:var(--quiet);font-size:clamp(14px,1.4vw,22px);margin-top:6px}
 .live{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:clamp(13px,1.2vw,20px);color:var(--quiet)}
+.right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:flex-end}
+.clock{font-family:Oswald,sans-serif;font-weight:600;font-size:clamp(15px,1.5vw,26px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.glass .clock{font-weight:700;font-size:clamp(18px,1.9vw,36px);color:#111;border-left:3px solid #111;padding-left:18px}
 .dot{width:12px;height:12px;border-radius:50%;background:#2E9E5B;animation:p 1.6s ease-in-out infinite}
 .final .dot{background:var(--gold);animation:none}
 @keyframes p{50%{opacity:.35}}
@@ -130,7 +133,7 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
   <div class="brand" id="brand" hidden></div>
   <header>
     <div><h1 id="title">Live leaderboard</h1><div class="sub" id="sub"></div></div>
-    <div class="live" id="live" aria-live="polite"></div>
+    <div class="right"><div class="live" id="live" aria-live="polite"></div><div class="clock" id="clock" aria-label="Time of day"></div></div>
   </header>
   <main id="board"><div class="msg">Loading scores…</div></main>
   <footer><span>Scored live with Anchored In Archery</span><span id="updated"></span></footer>
@@ -280,6 +283,9 @@ async function load() {
 }
 load();
 setInterval(load, 10000);
+// Time of day beside the Live dot, from the screen's own clock.
+const tickClock = () => { document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+tickClock(); setInterval(tickClock, 1000);
 // On a TV the board scrolls by itself when it is taller than the screen: down slowly, a pause, then back to the top. &scroll=0 turns it off.
 if (tv && q.get("scroll") !== "0") {
   let wait = 5, last = performance.now(), pos = 0;
