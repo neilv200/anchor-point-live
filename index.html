@@ -41,6 +41,7 @@ footer{margin-top:22px;color:var(--quiet);font-size:clamp(12px,1vw,16px);display
 a{color:var(--accent)}
 .tv .wrap{max-width:none;padding:28px 36px}
 .brand{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:clamp(16px,4vw,64px);background:#fff;border-radius:18px;padding:clamp(10px,1.4vw,22px) 20px;margin-bottom:18px;border:1px solid var(--line)}
+.brand[hidden]{display:none}
 .brand img{display:block;height:clamp(44px,7vw,120px);width:auto;max-width:100%}
 .brand img.wide{height:clamp(30px,4.6vw,78px)}
 .ends{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.28em;font-size:.6em}
@@ -57,10 +58,27 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
 .ebox i{display:block;font-style:normal;color:var(--quiet);font-size:.78em}
 .ebox.todo{opacity:.35}.ebox.now{border-color:var(--gold)}
 .seg{color:var(--quiet)}.seg.cur{color:var(--gold)}
+/* TV with host logos: the logos sit still behind the board and the see-through cards scroll over them */
+.backdrop{position:fixed;inset:0;z-index:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5vh;background:radial-gradient(90% 70% at 50% 45%,#fff 0%,#F3EFE6 70%,#E7E0D0 100%)}
+.backdrop img{display:block;mix-blend-mode:multiply;opacity:.6;max-width:78vw;height:auto}
+.backdrop img:first-child{width:62vw}.backdrop img.wide{width:78vw}
+.glass .backdrop{display:flex}
+.glass .wrap{position:relative;z-index:1;transition:opacity .5s}
+.glass .brand{display:none}
+.glass header{position:sticky;top:0;z-index:3;margin:0 -36px 16px;padding:18px 36px 14px;background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:3px solid var(--gold)}
+.glass .wrap{padding-top:0}
+.glass .div{background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.14);box-shadow:0 10px 30px rgba(0,0,0,.10)}
+.glass tr.er .ends{background:rgba(255,255,255,.55)}
+.glass .ebox{background:rgba(255,255,255,.75);border-color:rgba(0,0,0,.18)}
+.glass table.tri th.tt,.glass table.tri td.tt{background:rgba(212,160,23,.14)}
+.glass td,.glass table.tri th.sg,.glass table.tri td.sg,.glass table.tri td.xx,.glass table.tri th.xx{border-color:rgba(0,0,0,.16)}
+.glass footer{background:rgba(255,255,255,.8);border-radius:12px;padding:8px 14px}
+.fading .wrap{opacity:0}
 .demo{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;font-size:.5em;vertical-align:middle;border:1px solid var(--warn);color:var(--warn);font-family:Inter,sans-serif;letter-spacing:0}
 </style>
 </head>
 <body>
+<div class="backdrop" id="backdrop" aria-hidden="true"></div>
 <div class="wrap">
   <div class="brand" id="brand" hidden></div>
   <header>
@@ -88,6 +106,10 @@ if (BRANDS[brandKey]) {
   const b = document.getElementById("brand");
   b.innerHTML = BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}"${l.wide ? ' class="wide"' : ""}>`).join("");
   b.hidden = false;
+  if (tv && q.get("glass") !== "0") { // logos behind the board; &glass=0 puts the plain logo bar back
+    document.getElementById("backdrop").innerHTML = b.innerHTML;
+    document.documentElement.dataset.theme = "light"; document.body.classList.add("glass");
+  }
 }
 // ?t=demo shows sample scores so the screen can be checked before a shoot.
 function demoData() {
@@ -207,23 +229,21 @@ load();
 setInterval(load, 10000);
 // On a TV the board scrolls by itself when it is taller than the screen: down slowly, a pause, then back to the top. &scroll=0 turns it off.
 if (tv && q.get("scroll") !== "0") {
-  let dir = 1, wait = 0, last = performance.now(), pos = 0;
-  const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 36)); // pixels a second; &speed=30 to try another pace
+  let wait = 5, last = performance.now(), pos = 0;
+  const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 28)); // pixels a second; &speed=20 to try another pace
   const stepScroll = (now) => {
     const dt = Math.min(100, now - last) / 1000; last = now;
     const max = document.documentElement.scrollHeight - innerHeight;
     if (max > 20) {
       if (wait > 0) wait -= dt;
-      else {
-        pos = Math.max(0, Math.min(max, pos + dir * SPEED * dt)); scrollTo(0, pos);
-        if (pos >= max) { dir = -1; wait = 5; }
-        else if (pos <= 0 && dir < 0) { dir = 1; wait = 5; }
-        if (dir < 0 && wait <= 0) { pos = Math.max(0, pos - 600 * dt); scrollTo(0, pos); }
-      }
+      else if (pos >= max) { // at the bottom: fade out, start again from the top, fade in
+        wait = 6; document.body.classList.add("fading");
+        setTimeout(() => { pos = 0; scrollTo(0, 0); document.body.classList.remove("fading"); }, 550);
+      } else { pos = Math.min(max, pos + SPEED * dt); scrollTo(0, pos); if (pos >= max) wait = 5; }
     } else pos = 0;
     requestAnimationFrame(stepScroll);
   };
-  wait = 5; requestAnimationFrame(stepScroll);
+  requestAnimationFrame(stepScroll);
 }
 </script>
 </body>
