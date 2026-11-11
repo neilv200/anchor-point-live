@@ -78,6 +78,38 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
 .glass th,.glass .meta,.glass .sub,.glass .ends .lab,.glass .seg{color:#33363C}
 .glass .seg.cur{color:#9A6B00;font-weight:700}
 .glass footer{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);border-radius:999px;padding:10px 20px}
+/* TV glass: bigger, bolder and brighter so it reads from the shooting line */
+.glass table{font-size:clamp(17px,1.5vw,30px)}
+.glass .div h2{margin:-20px -22px 10px;padding:12px 22px;background:#111;color:#FFD400;font-size:clamp(22px,2.1vw,40px);letter-spacing:2px}
+.glass th{font-size:.62em;font-weight:800;color:#111}
+.glass table.tri th.sg{font-size:.7em;font-weight:800}
+.glass table.tri th.sg:nth-of-type(3){color:#0B4FC4}.glass table.tri th.sg:nth-of-type(4){color:#C81E12}.glass table.tri th.sg:nth-of-type(5){color:#111}
+.glass thead th{border-bottom:4px solid #111;padding-bottom:8px}
+.glass table tbody tr.mr td,.glass table tbody tr:not(.er) td,.glass table.tri tbody tr.mr td.sg,.glass table.tri tbody tr.mr td.tt,.glass table.tri tbody tr.mr td.xx{border-top:4px solid #111}
+.glass table tbody tr:first-child td,.glass table.tri tbody tr:first-child td.sg,.glass table.tri tbody tr:first-child td.tt,.glass table.tri tbody tr:first-child td.xx{border-top:0}
+.glass tr.er td{border-top:0}
+.glass .name{font-weight:800;font-size:1.08em;color:#0B0B0C;white-space:nowrap}
+.glass table.tri td,.glass table.tri th{padding-left:.35em;padding-right:.35em}
+.glass .meta{display:block;font-size:.58em;font-weight:700;color:#33363C}
+.glass .place{width:2em;height:2em;font-size:.95em;font-weight:900;background:#111;color:#fff}
+.glass .place.p1{background:#FFC400;color:#111}.glass .place.p2{background:#8E979F;color:#fff}.glass .place.p3{background:#C0651F;color:#fff}
+.glass table.tri th.sg,.glass table.tri td.sg{min-width:0;padding-left:.45em;padding-right:.45em;border-left:3px solid rgba(17,17,17,.6)}
+.glass table.tri td.sg{font-family:Oswald,sans-serif;font-weight:700;font-size:1.15em}
+.glass table.tri td.sg:nth-of-type(3){color:#0B4FC4}.glass table.tri td.sg:nth-of-type(4){color:#C81E12}.glass table.tri td.sg:nth-of-type(5){color:#111}
+.glass table.tri td.sg.cur{background:rgba(255,212,0,.38)}
+.glass table.tri th.tt{background:#111;color:#FFD400;border-left:4px solid #111}
+.glass table.tri td.tt{background:#FFD400;color:#111;border-left:4px solid #111;font-weight:900;font-size:1.4em;padding-left:.4em;padding-right:.4em}
+.glass table.tri td.xx,.glass table.tri th.xx{border-left:3px solid rgba(17,17,17,.6);font-weight:800}
+.glass td.score{font-weight:900;font-size:1.45em}
+.glass td.r{font-weight:700}
+.glass .ends{font-size:.6em}
+.glass .ends .lab{font-weight:800;color:#111}
+.glass .ebox{border:2px solid rgba(17,17,17,.45);background:#fff}
+.glass .ebox b{font-weight:700;font-size:1.25em;color:#111}.glass .ebox i{font-weight:700;color:#0B4FC4;font-size:.85em}
+.glass .ebox.now{border-color:#C81E12;background:#FFF3B0}
+.glass .ebox.todo{opacity:.45}
+.glass .tie{color:#C81E12;border-color:#C81E12;font-weight:800}
+.glass h1{font-weight:700}.glass .live{color:#111;font-weight:800}.glass .dot{background:#18A558;width:16px;height:16px}
 .fading .wrap{opacity:0}
 .demo{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;font-size:.5em;vertical-align:middle;border:1px solid var(--warn);color:var(--warn);font-family:Inter,sans-serif;letter-spacing:0}
 </style>
@@ -190,7 +222,7 @@ function draw(d) {
     const rows = rank(groups[g]);
     return `<section class="div"><h2>${esc(g)}</h2><table class="tri"><thead><tr><th>#</th><th>Archer</th>${segs.map((n) => `<th class="sg">${esc(n)}</th>`).join("")}<th class="tt">Total</th><th class="xx">X</th></tr></thead><tbody>${rows.map((r) => {
       const cur = Math.max(0, r.segs.findIndex((x) => x.ends.length < x.of)), ci = r.segs.every((x) => x.ends.length >= x.of) ? r.segs.length - 1 : cur, c = r.segs[ci];
-      return `<tr class="mr"><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale ? `<span class="meta"> · Bale ${esc(r.bale)}${esc(r.pos || "")}</span>` : ""}</td>${r.segs.map((x, k) => `<td class="sg seg${k === ci && x.ends.length < x.of ? " cur" : ""}">${x.ends.length ? x.ends.reduce((a, b) => a + b, 0) : "–"}</td>`).join("")}<td class="tt score">${r.total}</td><td class="xx">${r.x}</td></tr>${showEnds ? `<tr class="er"><td></td><td colspan="${r.segs.length + 3}">${endStrip(c.ends, c.of, `${c.name} ${Math.min(c.ends.length, c.of)}/${c.of}`)}</td></tr>` : ""}`; }).join("")}</tbody></table></section>`;
+      return `<tr class="mr"><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale ? `<span class="meta">Bale ${esc(r.bale)}${esc(r.pos || "")}</span>` : ""}</td>${r.segs.map((x, k) => `<td class="sg seg${k === ci && x.ends.length < x.of ? " cur" : ""}">${x.ends.length ? x.ends.reduce((a, b) => a + b, 0) : "–"}</td>`).join("")}<td class="tt score">${r.total}</td><td class="xx">${r.x}</td></tr>${showEnds ? `<tr class="er"><td></td><td colspan="${r.segs.length + 3}">${endStrip(c.ends, c.of, `${c.name} ${Math.min(c.ends.length, c.of)}/${c.of}`)}</td></tr>` : ""}`; }).join("")}</tbody></table></section>`;
   }).join("")}</div>`; }
   else $("board").innerHTML = names.length ? `<div class="grid">${names.map((g) => {
     const rows = rank(groups[g]);
