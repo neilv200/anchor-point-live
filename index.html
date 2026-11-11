@@ -59,7 +59,8 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
 .ebox{min-width:2.4em;text-align:center;border:1px solid var(--line);border-radius:.4em;padding:.12em .2em;line-height:1.15;font-variant-numeric:tabular-nums}
 .ebox b{display:block;font-family:Oswald,sans-serif;font-size:1.15em}
 .ebox i{display:block;font-style:normal;color:var(--quiet);font-size:.78em}
-.ebox.todo{opacity:.35}.ebox.now{border-color:var(--gold)}
+.ebox.todo{opacity:.35}.ebox.drop{opacity:.5}.ebox.drop b{text-decoration:line-through}
+tr.er .ends+.ends{margin-top:.35em}.ebox.now{border-color:var(--gold)}
 .seg{color:var(--quiet)}.seg.cur{color:var(--gold)}
 /* Printable score sheets (&sheets=1) */
 .sheets header,.sheets footer,.sheets .brand,.sheets .backdrop{display:none!important}
@@ -174,7 +175,8 @@ if (tv) document.body.classList.add("tv");
 const BRANDS = {
   shoppe: [{ src: "brand/archery-shoppe.png", alt: "Archery Shoppe" }, { src: "brand/trifecta-challenge.png", alt: "Trifecta Challenge", wide: true }],
 };
-const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug + " " + host) ? "shoppe" : "")).toLowerCase();
+const leagueSlug = (q.get("league") || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
+const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug + " " + host + " " + leagueSlug) ? "shoppe" : "")).toLowerCase();
 if (BRANDS[brandKey]) {
   const b = document.getElementById("brand");
   b.innerHTML = BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}"${l.wide ? ' class="wide"' : ""}>`).join("");
@@ -257,6 +259,55 @@ function rank(list) {
     return { ...a, place, tie: a.total > 0 && s.some((b, j) => j !== i && b.total === a.total && b.x === a.x) };
   });
 }
+/* League standings (?league=address): every night of a season, with each group's best nights counted.
+   groups = [{key,label,best}]: best > 0 counts that many best nights, best < 0 drops that many lowest, 0 counts all. */
+function leagueDemo() {
+  const groups = [{ key: "vegas", label: "Vegas", best: 3 }, { key: "trifecta", label: "Trifecta", best: 3 }];
+  const nights = [["Nov 5", "vegas", 330], ["Nov 12", "vegas", 330], ["Nov 19", "trifecta", 480], ["Dec 3", "trifecta", 480], ["Dec 10", "vegas", 330]].map((n, i) => ({ id: "n" + i, name: n[0], date: "2026-" + (n[0].startsWith("Nov") ? "11-" : "12-") + n[0].split(" ")[1].padStart(2, "0"), group: n[1], status: "final", max: n[2] }));
+  const people = [["Alex R.", "Men", "Freestyle", .95], ["Jamie L.", "Men", "Freestyle", .93], ["Chris M.", "Men", "Freestyle", .9], ["Taylor B.", "Men", "Bowhunter", .88], ["Mark R.", "Men", "Bowhunter", .85], ["Maya T.", "Women", "Freestyle", .93], ["Jordan P.", "Women", "Freestyle", .9], ["Ava L.", "Women", "Bowhunter", .86], ["Eli K.", "Youth", "Freestyle", .84], ["Nora V.", "Youth", "Freestyle", .8], ["Sam B.", "Men", "Barebow / Traditional", .7], ["Rita F.", "Women", "Barebow / Traditional", .66]];
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const scores = [];
+  people.forEach((p, pi) => nights.forEach((n, ni) => { if ((pi + ni) % 7 === 3) return; scores.push({ night: n.id, name: p[0], division: p[1], class: p[2], total: Math.round(n.max * (p[3] + (rnd() - .5) * .06)), x: Math.round(rnd() * 12), ends: 10, of: 10 }); }));
+  return { ok: true, league: { name: "Trifecta League 2026-27", groups }, nights, scores };
+}
+function drawLeague(d) {
+  const $ = (id) => document.getElementById(id), L = d.league, groups = (L.groups && L.groups.length ? L.groups : [{ key: "", label: "League", best: 0 }]);
+  const nights = d.nights.filter((n) => n.status !== "draft" || d.scores.some((s) => s.night === n.id));
+  document.title = `${L.name} · League standings`;
+  $("title").textContent = L.name;
+  const shot = nights.filter((n) => d.scores.some((s) => s.night === n.id)).length;
+  $("sub").textContent = [`League standings`, `${shot} of ${d.nights.length} night${d.nights.length === 1 ? "" : "s"} shot`, groups.filter((g) => g.best).map((g) => g.best > 0 ? `best ${g.best} ${g.label}` : `lowest ${-g.best} ${g.label} dropped`).join(" + ")].filter(Boolean).join(" · ");
+  const liveNow = nights.some((n) => n.status === "live");
+  $("live").className = "live" + (liveNow ? "" : " final");
+  $("live").innerHTML = `<span class="dot" aria-hidden="true"></span>${liveNow ? "League night live" : "Standings"}`;
+  const key = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const gOf = (n) => groups.find((g) => g.key === n.group) || groups[0];
+  const people = {};
+  d.scores.forEach((s) => { const k = key(s.name); if (!k) return; const p = people[k] = people[k] || { name: s.name, division: s.division, class: s.class, by: {}, x: 0, last: "" };
+    const n = nights.find((x) => x.id === s.night); if (!n) return; p.by[s.night] = s; if ((n.date || "") >= p.last) { p.last = n.date || ""; p.name = s.name; p.division = s.division; p.class = s.class; } });
+  const rows = Object.values(people).map((p) => {
+    const segs = groups.map((g) => { const ns = nights.filter((n) => gOf(n) === g), got = ns.map((n) => ({ n, s: p.by[n.id] })).filter((x) => x.s);
+      const sorted = got.slice().sort((a, b) => b.s.total - a.s.total), keepN = g.best > 0 ? g.best : g.best < 0 ? Math.max(1, sorted.length + g.best) : sorted.length;
+      const keep = new Set(sorted.slice(0, keepN).map((x) => x.n.id));
+      return { g, ns, keep, total: sorted.slice(0, keepN).reduce((t, x) => t + x.s.total, 0), x: sorted.slice(0, keepN).reduce((t, x) => t + (x.s.x || 0), 0), count: got.length }; });
+    return { ...p, segs, total: segs.reduce((t, x) => t + x.total, 0), x: segs.reduce((t, x) => t + x.x, 0) };
+  });
+  const byDiv = {}; rows.forEach((r) => (byDiv[group(r)] = byDiv[group(r)] || []).push(r));
+  const names = Object.keys(byDiv).sort();
+  const strip = (r, sg) => `<div class="ends"><span class="lab">${esc(sg.g.label)}</span>${sg.ns.map((n) => { const s = r.by[n.id], dt = n.date ? new Date(n.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : esc(n.name);
+    return s ? `<span class="ebox${sg.keep.has(n.id) ? "" : " drop"}${n.status === "live" ? " now" : ""}"><b>${s.total}</b><i>${dt}</i></span>` : `<span class="ebox todo"><b>–</b><i>${dt}</i></span>`; }).join("")}</div>`;
+  $("board").innerHTML = names.length ? `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,620px),1fr))">${names.map((gname) => {
+    const rk = rank(byDiv[gname]);
+    return `<section class="div"><h2>${esc(gname)}</h2><table class="tri"><thead><tr><th>#</th><th>Archer</th>${groups.map((g) => `<th class="sg">${esc(g.label)}</th>`).join("")}<th class="tt">Total</th><th class="xx">X</th></tr></thead><tbody>${rk.map((r) =>
+      `<tr class="mr"><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}</td>${r.segs.map((x) => `<td class="sg seg">${x.count ? x.total : "–"}</td>`).join("")}<td class="tt score">${r.total}</td><td class="xx">${r.x}</td></tr><tr class="er"><td></td><td colspan="${groups.length + 3}">${r.segs.map((sg) => strip(r, sg)).join("")}</td></tr>`).join("")}</tbody></table></section>`;
+  }).join("")}</div>` : `<div class="msg">No league scores yet. Standings appear after the first league night is scored.</div>`;
+  if (document.body.classList.contains("glass")) {
+    const hb = document.querySelector("header").getBoundingClientRect(), h2 = document.querySelector(".div h2"), pin1 = Math.round(hb.height - 14);
+    document.documentElement.style.setProperty("--pin1", pin1 + "px");
+    if (h2) document.documentElement.style.setProperty("--pin2", Math.round(pin1 + h2.getBoundingClientRect().height - 1) + "px");
+  }
+  $("updated").textContent = "Dimmed scores are dropped · updates on its own";
+}
 function draw(d) {
   if (q.get("sheets") === "1") return drawSheets(d);
   const t = d.tournament, $ = (id) => document.getElementById(id);
@@ -296,6 +347,15 @@ function draw(d) {
   $("updated").textContent = d.updated_at ? `Last score ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
 }
 async function load() {
+  if (leagueSlug) {
+    if (leagueSlug === "trifecta-league-demo") { drawLeague(leagueDemo()); if (!document.querySelector("#title .demo")) document.getElementById("title").insertAdjacentHTML("beforeend", '<span class="demo">Sample scores</span>'); return; }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/l_board`, { method: "POST", headers: { apikey: PUBLIC_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ p_slug: leagueSlug }) });
+      const d = await r.json();
+      if (d && d.ok) drawLeague(d); else document.getElementById("board").innerHTML = `<div class="msg">This league isn't public, or the address is wrong.</div>`;
+    } catch (e) { document.getElementById("live").textContent = "Reconnecting…"; }
+    return;
+  }
   if (slug === "trifecta-demo") { draw(trifectaDemo()); document.getElementById("title").insertAdjacentHTML("beforeend", '<span class="demo">Sample scores</span>'); return; }
   if (slug === "demo") { draw(demoData()); document.getElementById("title").insertAdjacentHTML("beforeend", '<span class="demo">Sample scores</span>'); return; }
   if (host) {
