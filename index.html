@@ -208,13 +208,14 @@ setInterval(load, 10000);
 // On a TV the board scrolls by itself when it is taller than the screen: down slowly, a pause, then back to the top. &scroll=0 turns it off.
 if (tv && q.get("scroll") !== "0") {
   let dir = 1, wait = 0, last = performance.now(), pos = 0;
+  const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 36)); // pixels a second; &speed=30 to try another pace
   const stepScroll = (now) => {
     const dt = Math.min(100, now - last) / 1000; last = now;
     const max = document.documentElement.scrollHeight - innerHeight;
     if (max > 20) {
       if (wait > 0) wait -= dt;
       else {
-        pos = Math.max(0, Math.min(max, pos + dir * 45 * dt)); scrollTo(0, pos);
+        pos = Math.max(0, Math.min(max, pos + dir * SPEED * dt)); scrollTo(0, pos);
         if (pos >= max) { dir = -1; wait = 5; }
         else if (pos <= 0 && dir < 0) { dir = 1; wait = 5; }
         if (dir < 0 && wait <= 0) { pos = Math.max(0, pos - 600 * dt); scrollTo(0, pos); }
