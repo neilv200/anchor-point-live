@@ -61,6 +61,27 @@ table.tri tr.mr td{padding-top:14px;padding-bottom:10px}
 .ebox i{display:block;font-style:normal;color:var(--quiet);font-size:.78em}
 .ebox.todo{opacity:.35}.ebox.now{border-color:var(--gold)}
 .seg{color:var(--quiet)}.seg.cur{color:var(--gold)}
+/* Printable score sheets (&sheets=1) */
+.sheets header,.sheets footer,.sheets .brand,.sheets .backdrop{display:none!important}
+.sheets .wrap{max-width:8.5in;padding:12px}
+.sh-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.sh-bar span{color:#555;flex:1 1 200px}.sh-bar button{font:inherit;font-weight:700;padding:10px 16px;border-radius:10px;border:0;background:#111;color:#FFD400;cursor:pointer}
+.sheet{box-sizing:border-box;width:100%;height:5.1in;padding:.18in .22in;margin-bottom:.12in;background:#fff;color:#000;border:1.5px solid #000;display:flex;flex-direction:column;gap:.07in;font-family:Inter,system-ui,sans-serif;break-inside:avoid}
+.sh-top{display:flex;align-items:center;gap:.15in}
+.sh-logos{display:flex;flex-direction:column;gap:2px;align-items:flex-start}.sh-logos img{height:.3in;width:auto;display:block}
+.sh-ev{flex:1;display:flex;flex-direction:column}.sh-ev b{font-family:Oswald,sans-serif;font-size:17pt;line-height:1.05;text-transform:uppercase}.sh-ev span{font-size:9pt}
+.sh-bale{border:2px solid #000;border-radius:6px;padding:2px 12px;text-align:center}.sh-bale span{display:block;font-size:7pt;text-transform:uppercase;letter-spacing:.08em}.sh-bale b{font-family:Oswald,sans-serif;font-size:20pt;line-height:1}
+.sh-who{display:grid;grid-template-columns:2fr 1fr 1.3fr;gap:.1in}
+.sh-who div{border-bottom:1.5px solid #000;padding-bottom:1px}.sh-who span{display:block;font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:#333}.sh-who b{font-size:13pt;min-height:16pt;display:block}
+.sh-grid{flex:1;width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}
+.sh-grid th,.sh-grid td{border:1px solid #000;padding:0;text-align:center}
+.sh-grid th{background:#111;color:#fff;font-size:7.5pt;text-transform:uppercase;letter-spacing:.04em;height:.2in;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sh-grid td.n{font-weight:700;width:.45in;background:#eee;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sh-grid .w{width:1in}.sh-grid tr.tot td{font-weight:800;text-transform:uppercase;font-size:9pt;border-top:2.5px solid #000;text-align:right;padding-right:8px}
+.sh-sign{display:grid;grid-template-columns:1fr 1fr auto;gap:.2in;align-items:end;font-size:7pt;text-transform:uppercase;letter-spacing:.06em}
+.sh-sign div{border-top:1px solid #000;padding-top:2px;margin-top:.16in}.sh-sign .code{border:0;font-family:monospace;font-size:8pt;letter-spacing:.04em}
+@page{size:letter;margin:.3in}
+@media print{.sh-bar{display:none}.sheets .wrap{padding:0;max-width:none}body{background:#fff!important}.sheet{margin-bottom:.1in}.sheet:nth-of-type(2n){break-after:page}}
 /* TV with host logos: the logos sit still behind the board and liquid-glass cards scroll over them */
 .backdrop{position:fixed;inset:0;z-index:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5vh;background:radial-gradient(90% 70% at 50% 45%,#fff 0%,#F3EFE6 65%,#DDD3BD 100%)}
 .backdrop img{display:block;mix-blend-mode:multiply;opacity:.85;max-width:78vw;height:auto}
@@ -178,6 +199,27 @@ function demoData() {
     tournament: { name: "Thursday League · Test", event_date: new Date().toISOString().slice(0, 10), ends, per_end: 3, status: "live", divisions: Object.keys(names) } };
 }
 // ?t=trifecta-demo: sample Trifecta Challenge. The Five and Vegas are finished, the Trifecta face is being shot end by end.
+// &sheets=1: printable score sheets for every paid archer, two to a letter page, already filled in with name, division, class and bale.
+let sheetsDone = false;
+function drawSheets(d) {
+  if (sheetsDone) return; // drawn once, so a refresh never wipes the page mid-print
+  const el = document.getElementById("board");
+  if (!d || !d.ok) { el.innerHTML = `<div class="msg">Score sheets appear here once the director opens scoring (Setup → Scoring open) with the leaderboard set to public.</div>`; return; }
+  sheetsDone = true; document.body.classList.add("sheets"); document.documentElement.dataset.theme = "light";
+  const t = d.tournament, ends = t.segs ? 10 : t.ends, per = t.segs ? 4 : t.per_end;
+  const date = t.event_date ? new Date(t.event_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
+  const logos = BRANDS[brandKey] ? BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}">`).join("") : `<img src="icon.png" alt="Anchored In Archery">`;
+  const list = d.archers.slice().sort((a, b) => (a.bale || 999) - (b.bale || 999) || String(a.pos || "").localeCompare(String(b.pos || "")) || a.name.localeCompare(b.name));
+  const sheet = (a) => `<section class="sheet">
+    <div class="sh-top"><div class="sh-logos">${logos}</div><div class="sh-ev"><b>${esc(t.name)}</b><span>${[date, `${ends} ends of ${per}`].filter(Boolean).join(" · ")}</span></div><div class="sh-bale"><span>Bale</span><b>${a.bale ? esc(a.bale) + esc(a.pos || "") : "__"}</b></div></div>
+    <div class="sh-who"><div><span>Archer</span><b>${esc(a.name)}</b></div><div><span>Division</span><b>${esc(a.division || "")}</b></div><div><span>Class</span><b>${esc(a.class || "")}</b></div></div>
+    <table class="sh-grid"><thead><tr><th>End</th>${Array.from({ length: per }, (_, i) => `<th>${i + 1}</th>`).join("")}<th class="w">End total</th><th class="w">Running</th><th>X</th></tr></thead>
+    <tbody>${Array.from({ length: ends }, (_, i) => `<tr><td class="n">${i + 1}</td>${"<td></td>".repeat(per)}<td class="w"></td><td class="w"></td><td></td></tr>`).join("")}
+    <tr class="tot"><td colspan="${per + 1}">Total</td><td class="w" colspan="2"></td><td></td></tr></tbody></table>
+    <div class="sh-sign"><div>Archer signature</div><div>Scorer signature</div><div class="code">${esc((slug || host || "").toUpperCase())} · ${a.bale ? "B" + esc(a.bale) + esc(a.pos || "") : ""}</div></div>
+  </section>`;
+  el.innerHTML = `<div class="sh-bar"><b>${list.length} score sheet${list.length === 1 ? "" : "s"} for ${esc(t.name)}</b><span>Two per page on letter paper. Only paid archers are included.</span><button onclick="print()">Print or save as PDF</button></div>` + list.map(sheet).join("");
+}
 function trifectaDemo() {
   const SEG = [{ name: "The Five", ends: 12, per: 5, max: 6 }, { name: "Vegas", ends: 10, per: 3, max: 11 }, { name: "Trifecta", ends: 10, per: 4, max: 12 }];
   const names = { "Open Money Class": ["Alex R.", "Jamie L.", "Chris M.", "Taylor B.", "Morgan D.", "Casey H."], "Amateur": ["Mark R.", "Lisa K.", "Dan W.", "Amy S.", "Joe T.", "Rita F."], "Women's Open": ["Maya T.", "Jordan P.", "Ava L.", "Sam B."], "Youth": ["Eli K.", "Nora V.", "Ben C.", "Zoe M."] };
@@ -216,6 +258,7 @@ function rank(list) {
   });
 }
 function draw(d) {
+  if (q.get("sheets") === "1") return drawSheets(d);
   const t = d.tournament, $ = (id) => document.getElementById(id);
   document.title = `${t.name} · Live leaderboard`;
   $("title").textContent = t.name;
