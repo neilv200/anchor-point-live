@@ -88,6 +88,7 @@ tr.er .ends+.ends{margin-top:.35em}.ebox.now{border-color:var(--gold)}
 .backdrop img{display:block;mix-blend-mode:multiply;opacity:.85;max-width:78vw;height:auto}
 .backdrop img:first-child{width:62vw}.backdrop img.wide{width:78vw}
 .glass .backdrop{display:flex}
+.backdrop.art img{mix-blend-mode:normal;opacity:.6;width:auto!important;max-width:96vw;height:94vh;object-fit:contain}
 .glass .wrap{position:relative;z-index:1;transition:opacity .5s;padding-top:0}
 .glass .brand{display:none}
 .glass header,.glass .div,.glass footer{-webkit-backdrop-filter:blur(1.2px) saturate(150%) brightness(1.04);backdrop-filter:blur(1.2px) saturate(150%) brightness(1.04)}
@@ -176,13 +177,16 @@ const BRANDS = {
   shoppe: [{ src: "brand/archery-shoppe.png", alt: "Archery Shoppe" }, { src: "brand/trifecta-challenge.png", alt: "Trifecta Challenge", wide: true }],
 };
 const leagueSlug = (q.get("league") || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
+// One big piece of art behind the TV board (replaces the stacked logos there).
+const BRAND_ART = { shoppe: "brand/trifecta-2027.png" };
 const brandKey = (q.get("brand") || (/trifecta|shoppe/.test(slug + " " + host + " " + leagueSlug) ? "shoppe" : "")).toLowerCase();
 if (BRANDS[brandKey]) {
   const b = document.getElementById("brand");
   b.innerHTML = BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}"${l.wide ? ' class="wide"' : ""}>`).join("");
   b.hidden = false;
   if (tv && q.get("glass") !== "0") { // logos behind the board; &glass=0 puts the plain logo bar back
-    document.getElementById("backdrop").innerHTML = b.innerHTML;
+    const bd = document.getElementById("backdrop"), art = BRAND_ART[brandKey];
+    if (art) { bd.innerHTML = `<img src="${art}" alt="">`; bd.classList.add("art"); } else bd.innerHTML = b.innerHTML;
     document.documentElement.dataset.theme = "light"; document.body.classList.add("glass");
   }
 }
