@@ -416,18 +416,20 @@ if (tv && q.get("scroll") !== "0") {
   const place = () => { const r = head.getBoundingClientRect(); clip.style.top = Math.round(r.bottom + 16) + "px"; clip.style.left = Math.round(r.left) + "px"; clip.style.width = Math.round(r.width) + "px"; };
   const room = () => mover.scrollHeight - clip.clientHeight;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const glide = (from, to) => { // one move on the screen's own compositor: no per-frame script, so no dropped frames
-    const a = mover.animate([{ transform: `translate3d(0,${-from}px,0)` }, { transform: `translate3d(0,${-to}px,0)` }], { duration: Math.max(1, (to - from) / SPEED * 1000), easing: "linear", fill: "forwards" });
+  const PAGES = q.get("mode") === "pages", HOLD = Math.max(2, Math.min(60, +q.get("hold") || 7)) * 1000; // &mode=pages: hold still, then slide a screen at a time (for TVs that judder on a slow roll)
+  const glide = (from, to, ms) => { // one move on the screen's own compositor: no per-frame script, so no dropped frames
+    const a = mover.animate([{ transform: `translate3d(0,${-from}px,0)` }, { transform: `translate3d(0,${-to}px,0)` }], { duration: ms || Math.max(1, (to - from) / SPEED * 1000), easing: ms ? "cubic-bezier(.45,0,.2,1)" : "linear", fill: "forwards" });
     return a.finished.then(() => a, () => a);
   };
   (async () => {
     for (;;) {
       place();
       if (room() <= 20) { await sleep(2000); continue; }
-      await sleep(5000);
+      await sleep(PAGES ? HOLD : 5000);
       let at = 0; const runs = [];
-      while (room() - at > 2) { const to = room(); runs.push(await glide(at, to)); at = to; } // if the board grew on the way down, keep going
-      await sleep(5000);
+      if (PAGES) while (room() - at > 2) { const to = Math.min(room(), at + clip.clientHeight - 110); runs.push(await glide(at, to, 900)); at = to; await sleep(HOLD); }
+      else { while (room() - at > 2) { const to = room(); runs.push(await glide(at, to)); at = to; } // if the board grew on the way down, keep going
+        await sleep(5000); }
       document.body.classList.add("fading"); await sleep(550);
       runs.forEach((a) => a.cancel()); document.body.classList.remove("fading");
       await sleep(1000);
