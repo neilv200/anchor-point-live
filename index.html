@@ -91,8 +91,8 @@ tr.er .ends+.ends{margin-top:.35em}.ebox.now{border-color:var(--gold)}
 .backdrop.art img{mix-blend-mode:normal;opacity:.6;width:auto!important;max-width:96vw;height:94vh;object-fit:contain}
 .glass .wrap{position:relative;z-index:1;transition:opacity .5s;padding-top:0}
 .glass .brand{display:none}
-.glass header,.glass .div,.glass footer{-webkit-backdrop-filter:blur(1.2px) saturate(150%) brightness(1.04);backdrop-filter:blur(1.2px) saturate(150%) brightness(1.04)}
-.glass header{position:sticky;top:10px;z-index:3;margin:10px 0 18px;padding:16px 28px 14px;border-radius:30px;background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(255,255,255,.7));-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.9);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35),inset 0 0 26px rgba(255,255,255,.3),0 14px 34px rgba(0,0,0,.2)}
+.glass header,.glass .div,.glass footer{}
+.glass header{position:sticky;top:10px;z-index:3;margin:10px 0 18px;padding:16px 28px 14px;border-radius:30px;background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(255,255,255,.7));border:1px solid rgba(255,255,255,.9);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35),inset 0 0 26px rgba(255,255,255,.3),0 14px 34px rgba(0,0,0,.2)}
 .glass .grid{gap:20px}
 .glass .div{position:relative;overflow:hidden;border-radius:32px;padding:20px 22px;background:linear-gradient(135deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.24) 45%,rgba(255,255,255,.34) 100%);border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 1.5px 0 0 rgba(255,255,255,.55),inset 0 -1.5px 0 rgba(255,255,255,.3),inset 0 0 34px rgba(255,255,255,.28),0 22px 48px rgba(0,0,0,.22)}
 .glass .div::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(115deg,rgba(255,255,255,.5) 0%,rgba(255,255,255,0) 22%,rgba(255,255,255,0) 72%,rgba(255,255,255,.22) 100%)}
@@ -313,6 +313,11 @@ function drawLeague(d) {
   $("updated").textContent = "Dimmed scores are dropped · updates on its own";
 }
 function draw(d) {
+  // &pad=5 adds five sample archers to every division on this screen only (nothing is saved), to try out a long board.
+  const padN = Math.max(0, Math.min(30, +q.get("pad") || 0));
+  if (padN) { const seen = {}, extra = []; d.archers.forEach((a) => { const g = group(a); if (seen[g]) return; seen[g] = 1;
+    for (let i = 1; i <= padN; i++) extra.push({ ...a, name: "Sample archer " + i, bale: "", pos: "", total: 0, x: 0, ends_shot: 0, ends: [], segs: a.segs ? a.segs.map((x) => ({ ...x, ends: [], x: 0 })) : undefined }); });
+    d = { ...d, archers: d.archers.concat(extra) }; }
   if (q.get("sheets") === "1") return drawSheets(d);
   const t = d.tournament, $ = (id) => document.getElementById(id);
   document.title = `${t.name} · Live leaderboard`;
@@ -397,7 +402,7 @@ const tickClock = () => { document.getElementById("clock").textContent = new Dat
 tickClock(); setInterval(tickClock, 1000);
 // On a TV the board scrolls by itself when it is taller than the screen: down slowly, a pause, then back to the top. &scroll=0 turns it off.
 if (tv && q.get("scroll") !== "0") {
-  let wait = 5, last = performance.now(), pos = 0;
+  let wait = 5, last = performance.now(), pos = 0, lastPx = -1;
   const SPEED = Math.max(5, Math.min(200, +q.get("speed") || 31)); // pixels a second; &speed=20 to try another pace
   const stepScroll = (now) => {
     const dt = Math.min(100, now - last) / 1000; last = now;
@@ -407,7 +412,7 @@ if (tv && q.get("scroll") !== "0") {
       else if (pos >= max) { // at the bottom: fade out, start again from the top, fade in
         wait = 6; document.body.classList.add("fading");
         setTimeout(() => { pos = 0; scrollTo(0, 0); document.body.classList.remove("fading"); }, 550);
-      } else { pos = Math.min(max, pos + SPEED * dt); scrollTo(0, pos); if (pos >= max) wait = 5; }
+      } else { pos = Math.min(max, pos + SPEED * dt); const px = Math.round(pos); if (px !== lastPx) { lastPx = px; scrollTo(0, px); } if (pos >= max) wait = 5; }
     } else pos = 0;
     requestAnimationFrame(stepScroll);
   };
