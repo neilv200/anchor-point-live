@@ -223,16 +223,19 @@ function drawSheets(d) {
   const t = d.tournament, ends = t.segs ? 10 : t.ends, per = t.segs ? 4 : t.per_end;
   const date = t.event_date ? new Date(t.event_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
   const logos = BRANDS[brandKey] ? BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}">`).join("") : `<img src="icon.png" alt="Anchored In Archery">`;
-  const list = d.archers.slice().sort((a, b) => (a.bale || 999) - (b.bale || 999) || String(a.pos || "").localeCompare(String(b.pos || "")) || a.name.localeCompare(b.name));
+  const bf = +q.get("bale") || 0, filled = q.get("filled") === "1";
+  const list = d.archers.filter((a) => !bf || +a.bale === bf).slice().sort((a, b) => (a.bale || 999) - (b.bale || 999) || String(a.pos || "").localeCompare(String(b.pos || "")) || a.name.localeCompare(b.name));
   const sheet = (a) => `<section class="sheet">
     <div class="sh-top"><div class="sh-logos">${logos}</div><div class="sh-ev"><b>${esc(t.name)}</b><span>${[date, `${ends} ends of ${per}`].filter(Boolean).join(" · ")}</span></div><div class="sh-bale"><span>Bale</span><b>${a.bale ? esc(a.bale) + esc(a.pos || "") : "__"}</b></div></div>
     <div class="sh-who"><div><span>Archer</span><b>${esc(a.name)}</b></div><div><span>Division</span><b>${esc(a.division || "")}</b></div><div><span>Class</span><b>${esc(a.class || "")}</b></div></div>
-    <table class="sh-grid"><thead><tr><th>End</th>${Array.from({ length: per }, (_, i) => `<th>${i + 1}</th>`).join("")}<th class="w">End total</th><th class="w">Running</th><th>X</th></tr></thead>
-    <tbody>${Array.from({ length: ends }, (_, i) => `<tr><td class="n">${i + 1}</td>${"<td></td>".repeat(per)}<td class="w"></td><td class="w"></td><td></td></tr>`).join("")}
-    <tr class="tot"><td colspan="${per + 1}">Total</td><td class="w" colspan="2"></td><td></td></tr></tbody></table>
-    <div class="sh-sign"><div>Archer signature</div><div>Scorer signature</div><div class="code">${esc((slug || host || "").toUpperCase())} · ${a.bale ? "B" + esc(a.bale) + esc(a.pos || "") : ""}</div></div>
+    <table class="sh-grid"><thead><tr><th>End</th>${Array.from({ length: per }, (_, i) => `<th>${i + 1}</th>`).join("")}<th class="w">End total</th><th class="w">Running</th><th>X</th><th>Run X</th></tr></thead>
+    <tbody>${(() => { let run = 0, rx = 0; const E = filled && Array.isArray(a.e) ? a.e : [];
+      const rows = Array.from({ length: ends }, (_, i) => { const e = E.find((x) => x.n === i + 1); if (e) { run += e.t; rx += e.x; }
+        return `<tr><td class="n">${i + 1}</td>${Array.from({ length: per }, (_, k) => `<td>${e && e.a && e.a[k] != null ? esc(e.a[k]) : ""}</td>`).join("")}<td class="w">${e ? `<b>${e.t}</b>` : ""}</td><td class="w">${e ? run : ""}</td><td>${e ? e.x : ""}</td><td>${e ? rx : ""}</td></tr>`; }).join("");
+      return rows + `<tr class="tot"><td colspan="${per + 1}">Total</td><td class="w" colspan="2">${filled ? run : ""}</td><td colspan="2">${filled ? rx + " X" : ""}</td></tr>`; })()}</tbody></table>
+    <div class="sh-sign"><div>Archer signature</div><div>Scorer signature</div><div class="code">${filled ? (a.verified ? "✓ SUBMITTED IN APP" : "NOT SUBMITTED YET") + "<br>" : ""}${esc((slug || host || "").toUpperCase())} · ${a.bale ? "B" + esc(a.bale) + esc(a.pos || "") : ""}</div></div>
   </section>`;
-  el.innerHTML = `<div class="sh-bar"><b>${list.length} score sheet${list.length === 1 ? "" : "s"} for ${esc(t.name)}</b><span>Two per page on letter paper. Only paid archers are included.</span><button onclick="print()">Print or save as PDF</button></div>` + list.map(sheet).join("");
+  el.innerHTML = `<div class="sh-bar"><b>${list.length} ${filled ? "filled " : ""}score sheet${list.length === 1 ? "" : "s"} for ${esc(t.name)}${bf ? " · Bale " + bf : ""}</b><span>${filled ? "Every arrow, end total, running total and X count as scored in the app. " : ""}Two per page on letter paper. Only paid archers are included.</span><button onclick="print()">Print or save as PDF</button></div>` + list.map(sheet).join("");
 }
 function trifectaDemo() {
   const SEG = [{ name: "The Five", ends: 12, per: 5, max: 6 }, { name: "Vegas", ends: 10, per: 3, max: 11 }, { name: "Trifecta", ends: 10, per: 4, max: 12 }];
@@ -352,8 +355,8 @@ function draw(d) {
   }).join("")}</div>`; }
   else $("board").innerHTML = names.length ? `<div class="grid">${names.map((g) => {
     const rows = rank(groups[g]);
-    return `<section class="div"><h2>${esc(g)}</h2><table><thead><tr><th>#</th><th>Archer</th><th class="r">Score</th><th class="r">X</th><th class="r">Ends</th></tr></thead><tbody>${rows.map((r) =>
-      `<tr><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale ? `<div class="meta">Bale ${esc(r.bale)}${esc(r.pos || "")}</div>` : ""}</td><td class="r score">${r.total}</td><td class="r">${r.x}</td><td class="r">${r.ends_shot}/${t.ends}</td></tr>${showEnds && Array.isArray(r.ends) && r.ends.length ? `<tr class="er"><td></td><td colspan="4">${endStrip(r.ends, t.ends, "")}</td></tr>` : ""}`).join("")}</tbody></table></section>`;
+    return `<section class="div"><h2>${esc(g)}</h2><table><thead><tr><th>#</th><th>Archer</th><th class="r">Score</th><th class="r">X</th><th class="r">Last</th><th class="r">Ends</th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td><span class="place ${r.place <= 3 && r.total > 0 ? "p" + r.place : ""}">${r.place}</span></td><td><span class="name">${esc(r.name)}</span>${r.tie ? `<span class="tie">tied</span>` : ""}${r.bale || r.verified ? `<div class="meta">${r.bale ? `Bale ${esc(r.bale)}${esc(r.pos || "")}` : ""}${r.verified ? `${r.bale ? " · " : ""}✓ Submitted` : ""}</div>` : ""}</td><td class="r score">${r.total}</td><td class="r">${r.x}</td><td class="r last">${Array.isArray(r.ends) && r.ends.length ? r.ends[r.ends.length - 1] : "–"}</td><td class="r">${r.ends_shot}/${t.ends}</td></tr>${showEnds && Array.isArray(r.ends) && r.ends.length ? `<tr class="er"><td></td><td colspan="5">${endStrip(r.ends, t.ends, "")}</td></tr>` : ""}`).join("")}</tbody></table></section>`;
   }).join("")}</div>` : `<div class="msg">No archers yet.</div>`;
   if (document.body.classList.contains("glass")) {
     const hb = document.querySelector("header").getBoundingClientRect(), h2 = document.querySelector(".div h2");
