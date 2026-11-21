@@ -156,6 +156,13 @@ html.roll,.roll body{overflow:hidden;height:100%}
 html.roll .div h2,html.roll thead th{position:static!important;top:auto}
 .roll header{position:relative;top:0}
 .demo{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;font-size:.5em;vertical-align:middle;border:1px solid var(--warn);color:var(--warn);font-family:Inter,sans-serif;letter-spacing:0}
+/* Director's own look (Setup → TV board look): their color on the headings, their logo behind the TV board */
+html.branded .div h2{color:var(--brand)}
+html.branded header{border-bottom:4px solid var(--brand);padding-bottom:10px}
+html.branded body.glass .div h2{background:var(--brand);color:var(--brand-ink)}
+html.branded body.glass header{border-bottom:0;box-shadow:inset 0 -4px 0 var(--brand)}
+.hlogo{display:block;height:clamp(30px,3.4vw,64px);width:auto;max-width:22vw;object-fit:contain;align-self:center;border-radius:8px}
+.backdrop.own img{mix-blend-mode:multiply;opacity:.35;width:auto!important;max-width:80vw;max-height:72vh;object-fit:contain}
 </style>
 </head>
 <body>
@@ -198,6 +205,30 @@ if (BRANDS[brandKey]) {
     document.documentElement.dataset.theme = "light"; document.body.classList.add("glass");
   }
 }
+// The director's own logo and color (Run a tournament → Setup → TV board look). They win over the built-in host logos.
+// ?t=demo&logo=brand/<file>&color=%23rrggbb tries a look with the sample scores.
+let ownLogo = "", lookKey = null;
+function applyLook(t) {
+  const isDemo = slug === "demo" || slug === "trifecta-demo";
+  const logo = isDemo ? (/^brand\/[\w.-]+$/.test(q.get("logo") || "") ? q.get("logo") : "") : (t && /^[0-9a-f-]{36}\/[\w.-]{1,80}$/i.test(t.logo || "") ? `${SUPABASE_URL}/storage/v1/object/public/tv-logos/${t.logo}` : "");
+  const c = isDemo ? (q.get("color") || "") : (t && t.color) || "", color = /^#[0-9a-f]{6}$/i.test(c) ? c : "";
+  const key = logo + "|" + color; if (key === lookKey) return; lookKey = key; ownLogo = logo;
+  const root = document.documentElement;
+  if (color) { const n = parseInt(color.slice(1), 16), lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    root.style.setProperty("--brand", color); root.style.setProperty("--brand-ink", lum > 0.6 ? "#111" : "#fff"); root.classList.add("branded"); }
+  else { root.classList.remove("branded"); }
+  if (!logo) return;
+  const b = document.getElementById("brand");
+  b.innerHTML = `<img src="${logo}" alt="">`; b.hidden = false;
+  if (tv && q.get("glass") !== "0") {
+    const bd = document.getElementById("backdrop");
+    bd.innerHTML = `<img src="${logo}" alt="">`; bd.classList.remove("art"); bd.classList.add("own");
+    root.dataset.theme = "light"; document.body.classList.add("glass");
+    // and small in the title bar, so it shows even when the cards cover the middle of the screen
+    const hd = document.querySelector("header>div"); if (hd && !hd.querySelector(".hlogo")) hd.insertAdjacentHTML("afterbegin", `<img class="hlogo" src="${logo}" alt="">`);
+    else if (hd) hd.querySelector(".hlogo").src = logo;
+  }
+}
 // ?t=demo shows sample scores so the screen can be checked before a shoot.
 function demoData() {
   const names = { "Freestyle": ["Alex R.", "Jamie L.", "Chris M.", "Taylor B.", "Morgan D.", "Casey H."], "Bowhunter": ["Mark R.", "Lisa K.", "Dan W.", "Amy S."], "Barebow / Traditional": ["Joe T.", "Rita F.", "Sam B."], "Youth": ["Maya T.", "Jordan P.", "Ava L."] };
@@ -222,7 +253,7 @@ function drawSheets(d) {
   sheetsDone = true; document.body.classList.add("sheets"); document.documentElement.dataset.theme = "light";
   const t = d.tournament, ends = t.segs ? 10 : t.ends, per = t.segs ? 4 : t.per_end;
   const date = t.event_date ? new Date(t.event_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
-  const logos = BRANDS[brandKey] ? BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}">`).join("") : `<img src="icon.png" alt="Anchored In Archery">`;
+  const logos = ownLogo ? `<img src="${ownLogo}" alt="">` : BRANDS[brandKey] ? BRANDS[brandKey].map((l) => `<img src="${l.src}" alt="${l.alt}">`).join("") : `<img src="icon.png" alt="Anchored In Archery">`;
   const bf = +q.get("bale") || 0, filled = q.get("filled") === "1";
   const list = d.archers.filter((a) => !bf || +a.bale === bf).slice().sort((a, b) => (a.bale || 999) - (b.bale || 999) || String(a.pos || "").localeCompare(String(b.pos || "")) || a.name.localeCompare(b.name));
   const sheet = (a) => `<section class="sheet">
@@ -329,6 +360,7 @@ function draw(d) {
   if (padN) { const seen = {}, extra = []; d.archers.forEach((a) => { const g = group(a); if (seen[g]) return; seen[g] = 1;
     for (let i = 1; i <= padN; i++) extra.push({ ...a, name: "Sample archer " + i, bale: "", pos: "", total: 0, x: 0, ends_shot: 0, ends: [], segs: a.segs ? a.segs.map((x) => ({ ...x, ends: [], x: 0 })) : undefined }); });
     d = { ...d, archers: d.archers.concat(extra) }; }
+  applyLook(d.tournament);
   if (q.get("sheets") === "1") return drawSheets(d);
   const t = d.tournament, $ = (id) => document.getElementById(id);
   document.title = `${t.name} · Live leaderboard`;
