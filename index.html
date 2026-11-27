@@ -163,6 +163,23 @@ html.branded body.glass .div h2{background:var(--brand);color:var(--brand-ink)}
 html.branded body.glass header{border-bottom:0;box-shadow:inset 0 -4px 0 var(--brand)}
 .hlogo{display:block;height:clamp(30px,3.4vw,64px);width:auto;max-width:22vw;object-fit:contain;align-self:center;border-radius:8px}
 .backdrop.own img{mix-blend-mode:multiply;opacity:.35;width:auto!important;max-width:80vw;max-height:72vh;object-fit:contain}
+/* Home page: anchoredinarchery.com with no tournament in the address (the Instagram link) */
+.home{max-width:760px;margin:0 auto;display:grid;gap:18px;padding-bottom:20px}
+.home .hero{text-align:center;padding:10px 0 4px}
+.home .hero img{width:min(240px,56vw);height:auto;border-radius:28%;box-shadow:0 18px 50px rgba(212,160,23,.18)}
+.home .hero h2{font-family:Oswald,sans-serif;font-weight:700;font-size:clamp(34px,7vw,58px);line-height:1;letter-spacing:.5px;text-transform:uppercase;margin:18px 0 6px}
+.home .hero p{margin:0;color:var(--quiet);font-size:18px}
+.home .quote{font-size:clamp(20px,3.6vw,26px);line-height:1.35;text-align:center;font-style:italic;margin:4px 8px}
+.home .quote small{display:block;font-style:normal;font-size:15px;color:var(--quiet);margin-top:6px}
+.home .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.home .card h3{margin:0 0 10px;font-family:Oswald,sans-serif;font-weight:600;letter-spacing:.6px;text-transform:uppercase;font-size:20px}
+.home ul{margin:0;padding-left:20px;line-height:1.6}
+.home .btns{display:grid;gap:10px}
+.home .btn{display:block;text-align:center;text-decoration:none;font-weight:700;font-size:17px;padding:15px 16px;border-radius:14px;background:var(--gold);color:#16181D}
+.home .btn.alt{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.home .note{color:var(--quiet);font-size:14px;margin:8px 0 0}
+.home .links{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;font-size:14px}
+.home .links a{color:var(--quiet)}
 </style>
 </head>
 <body>
@@ -204,6 +221,27 @@ if (BRANDS[brandKey]) {
     if (art) { bd.innerHTML = `<img src="${art}" alt="">`; bd.classList.add("art"); } else bd.innerHTML = b.innerHTML;
     document.documentElement.dataset.theme = "light"; document.body.classList.add("glass");
   }
+}
+// anchoredinarchery.com on its own (the Instagram bio link): a real home page instead of a dead end.
+function showHome() {
+  document.title = "Anchored In Archery · The all-in-one archery app";
+  document.querySelector("header").style.display = "none";
+  document.querySelector("footer").innerHTML = "<span>© 2026 Anchored In Archery™</span>";
+  document.getElementById("board").innerHTML = `<div class="home">
+    <div class="hero"><img src="favicon-512.png" alt="Anchored In Archery logo"><h2>Anchored In Archery</h2><p>The all-in-one archery app that grows with you.</p></div>
+    <p class="quote">“I've been using 5 different apps to shoot one bow, so I made my own.”<small>Neil Valdez, founder · USA Archery Level 2 instructor</small></p>
+    <div class="card"><h3>Get the app · free beta</h3><div class="btns">
+      <a class="btn" href="https://testflight.apple.com/join/gGFdFyT9">iPhone: join the beta on TestFlight</a>
+      <a class="btn alt" href="mailto:support@anchoredinarchery.com?subject=Android%20beta&body=Please%20add%20me%20to%20the%20Anchored%20In%20Archery%20Android%20beta.%20My%20Google%20Play%20email%20is%3A%20">Android: ask to join the beta</a></div>
+      <p class="note">iPhone: install Apple's free TestFlight app, then tap the button. Android: send the email from the Gmail address you use for Google Play and we'll add you. Got a shop or team code? Enter it in the app when you sign up.</p></div>
+    <div class="card"><h3>What's inside</h3><ul>
+      <li>Score any round, and snap a photo of your target to score it</li>
+      <li>Live tournament and league scoring, with TV leaderboards</li>
+      <li>An AI coach built on USA Archery coaching</li>
+      <li>Your bow setup, arrow speed and sight marks, indoors and out</li>
+      <li>Badges, JOAD pins, practice plans and your season, all in one place</li></ul></div>
+    <div class="card"><h3>At a tournament?</h3><p style="margin:0">Open the leaderboard link from your director. It ends in <b>?t=</b> and the event name.</p></div>
+    <div class="links"><a href="support/">Support</a><a href="privacy/">Privacy</a><a href="terms/">Terms</a></div></div>`;
 }
 // The director's own logo and color (Run a tournament → Setup → TV board look). They win over the built-in host logos.
 // ?t=demo&logo=brand/<file>&color=%23rrggbb tries a look with the sample scores.
@@ -424,7 +462,7 @@ async function load() {
       return;
     }
   }
-  if (!slug) { document.getElementById("board").innerHTML = `<div class="msg">Open this page from the tournament's link (it ends in ?t=…).</div>`; return; }
+  if (!slug) { showHome(); return; }
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/t_board`, {
       method: "POST",
